@@ -1,15 +1,84 @@
 import os
 import sys
+import subprocess
 from flask import Flask, render_template, request, session, redirect, url_for
+from yt_dlp import YoutubeDL
+import ffmpeg
+
 
 
 
 app = Flask(__name__)
 
-@app.route('/', methods=['GET'])
+
+@app.route('/archive', methods=['GET'])
 def archive():
-    query = request.args.get('query')
-    return render_template('home.html')
+    url = request.args.get('url')
+    print(url)
+    do_tasks(url)
+
+    return url or "NO URL"
+
+def do_tasks(url):
+    clean_up_list = []
+    video = download_video(url)
+    clean_up_list.append(video)
+    remuxed_video = remux(video)
+    clean_up_list.append(remuxed_video)
+    upload(remuxed_video)
+    clean_up(clean_up_list)
+
+def download_video(url):
+    video = ""
+
+    ydl_opts = {
+        'format': 'bestvideo+bestaudio/best',
+        'merge_output_format': 'mp4',
+        'outtmpl': '%(title)s.%(ext)s',
+        'quiet': True,
+        'no_warnings': True,
+    }
+
+    try:
+        with YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            video = ydl.prepare_filename(info)
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
+    return video
+
+def remux(video):
+    video_parts = video.split(".")
+    if video_parts[-1] == "mp4":
+        return video
+    output_file = video_parts[0] + ".mp4"
+    stream = ffmpeg.input(video)
+    stream = ffmpeg.output(stream, output_file, format='mp4', vcodec='copy', acodec='copy')
+    ffmpeg.run(stream)
+    return output_file
+
+def upload(remuxed_video):
+    local_file = remuxed_video
+    remote_path = "onedrive:youtube_videos/"
+
+    with subprocess.Popen(["rclone", "sync", local_file, remote_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1, text=True) as process:
+        if process.stdout:
+            for line in process.stdout:
+                print(line, end="")
+        if process.stderr:
+            for line in process.stderr:
+                print(line, end="")
+
+    exit_code = process.wait()
+    print(f"rclone sync completed with exit code: {exit_code}")
+
+
+def clean_up(clean_up_list):
+    clean_up_list = set(clean_up_list)
+    for file in clean_up_list:
+        print(f"Deleting {file}")
+        os.remove(file)
 
 
 if __name__ == '__main__':
