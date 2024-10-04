@@ -9,15 +9,20 @@ import ffmpeg
 
 
 app = Flask(__name__)
+url_queue = []
 
 
 @app.route('/archive', methods=['GET'])
 def archive():
-    url = request.args.get('url')
-    print(url)
-    do_tasks(url)
+    try:
+        url = request.args.get('url')
+        print(url)
+        do_tasks(url)
 
-    return url or "NO URL"
+        return "OK", 200
+    except:
+        return "URL INVALID", 400
+
 
 def do_tasks(url):
     clean_up_list = []
