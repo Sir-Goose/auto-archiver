@@ -4,12 +4,11 @@ import subprocess
 from flask import Flask, render_template, request, session, redirect, url_for
 from yt_dlp import YoutubeDL
 import ffmpeg
-
-
-
+import threading
 
 app = Flask(__name__)
 url_queue = []
+is_processing = False
 
 
 @app.route('/archive', methods=['GET'])
@@ -17,21 +16,39 @@ def archive():
     try:
         url = request.args.get('url')
         print(url)
-        do_tasks(url)
+        url_queue.append(url)
+        if not is_processing:
+            start_processing()
 
         return "OK", 200
     except:
         return "URL INVALID", 400
 
 
-def do_tasks(url):
-    clean_up_list = []
-    video = download_video(url)
-    clean_up_list.append(video)
-    remuxed_video = remux(video)
-    clean_up_list.append(remuxed_video)
-    upload(remuxed_video)
-    clean_up(clean_up_list)
+def start_processing():
+    global is_processing
+    is_processing = True
+    processing_thread = threading.Thread(target=process_queue)
+    processing_thread.start()
+
+
+def process_queue():
+    global is_processing
+    while url_queue:
+        url = url_queue.pop(0)
+        try:
+            clean_up_list = []
+            video = download_video(url)
+            clean_up_list.append(video)
+            remuxed_video = remux(video)
+            clean_up_list.append(remuxed_video)
+            upload(remuxed_video)
+            clean_up(clean_up_list)
+        except:
+            continue
+
+    is_processing = False
+
 
 def download_video(url):
     video = ""
@@ -53,6 +70,7 @@ def download_video(url):
 
     return video
 
+
 def remux(video):
     video_parts = video.split(".")
     if video_parts[-1] == "mp4":
@@ -62,6 +80,7 @@ def remux(video):
     stream = ffmpeg.output(stream, output_file, format='mp4', vcodec='copy', acodec='copy')
     ffmpeg.run(stream)
     return output_file
+
 
 def upload(remuxed_video):
     local_file = remuxed_video
