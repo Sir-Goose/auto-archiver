@@ -16,9 +16,11 @@ def archive():
     try:
         url = request.args.get('url')
         print(url)
-        url_queue.append(url)
-        if not is_processing:
-            start_processing()
+        if not check_cache(url):
+            url_queue.append(url)
+            update_cache(url)
+            if not is_processing:
+                start_processing()
 
         return "OK", 200
     except:
@@ -48,6 +50,16 @@ def process_queue():
             continue
 
     is_processing = False
+
+def check_cache(url):
+    with open("video_cache", "r") as file:
+        for line in file:
+            return line.strip() == url
+
+
+def update_cache(url):
+    with open("video_cache", "a") as file:
+        file.write(url + "\n")
 
 
 def download_video(url):
