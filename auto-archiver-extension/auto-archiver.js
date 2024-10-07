@@ -1,12 +1,15 @@
 function archiveVideo(url) {
-  const archiveUrl = `http://100.81.40.2:5000/archive?url=${encodeURIComponent(url)}`;
-  fetch(archiveUrl)
-    .then((response) => {
-      console.log("Video archived successfully");
-    })
-    .catch((error) => {
-      console.error("Error archiving video:", error);
-    });
+  browser.storage.local.get("endpointUrl").then((result) => {
+    const endpointUrl = result.endpointUrl || "http://100.81.40.2:5000/archive";
+    const archiveUrl = `${endpointUrl}?url=${encodeURIComponent(url)}`;
+    fetch(archiveUrl)
+      .then((response) => {
+        console.log("Video archived successfully");
+      })
+      .catch((error) => {
+        console.error("Error archiving video:", error);
+      });
+  });
 }
 
 function extractVideoUrl(tabUrl) {
