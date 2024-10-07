@@ -1,7 +1,8 @@
 function archiveVideo(url) {
-  browser.storage.local.get("endpointUrl").then((result) => {
+  browser.storage.local.get(["endpointUrl", "apiKey"]).then((result) => {
     const endpointUrl = result.endpointUrl || "http://100.81.40.2:5000/archive";
-    const archiveUrl = `${endpointUrl}?url=${encodeURIComponent(url)}`;
+    const apiKey = result.apiKey || "";
+    const archiveUrl = `${endpointUrl}?url=${encodeURIComponent(url)}&key=${encodeURIComponent(apiKey)}`;
     fetch(archiveUrl)
       .then((response) => {
         console.log("Video archived successfully");
