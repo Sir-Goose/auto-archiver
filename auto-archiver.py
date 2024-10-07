@@ -13,6 +13,14 @@ is_processing = False
 
 @app.route('/archive', methods=['GET'])
 def archive():
+    key = request.args.get('key')
+    valid = False
+    if key:
+        valid = verify_key(key)
+        print(key)
+    if not valid or not key:
+        return "Invalid key", 401
+
     try:
         url = request.args.get('url')
         print(f"Recieved URL: {url}")
@@ -58,7 +66,10 @@ def process_queue():
 def check_cache(url):
     with open("video_cache", "r") as file:
         for line in file:
-            return line.strip() == url
+            if line.strip() == url:
+                return True
+        else:
+            return False
 
 
 def update_cache(url):
@@ -122,16 +133,23 @@ def clean_up(clean_up_list):
         print(f"Deleting {file}")
         os.remove(file)
 
+def verify_key(input):
+    key = read_config("key")
+    return input == key
+
 
 def read_config(data):
     with open('config.json') as config_file:
         config = json.load(config_file)
 
     remote_path = config['remote_path']
+    key = config['key']
     target_format = config['target_format']
 
     if data == "remote_path":
         return remote_path
+    if data == "key":
+        return key
     else:
         return target_format
 
