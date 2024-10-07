@@ -1,3 +1,7 @@
+# Project specific files
+endpoint
+video_cache
+
 # Ignore configuration files
 config.json
 .env
