@@ -1,6 +1,7 @@
 import os
 import sys
 import subprocess
+import json
 from flask import Flask, render_template, request, session, redirect, url_for
 from yt_dlp import YoutubeDL
 import ffmpeg
@@ -9,7 +10,6 @@ import threading
 app = Flask(__name__)
 url_queue = []
 is_processing = False
-
 
 @app.route('/archive', methods=['GET'])
 def archive():
@@ -88,12 +88,13 @@ def download_video(url):
 
 
 def remux(video):
+    target_format = read_config("target_format")
     video_parts = video.split(".")
-    if video_parts[-1] == "mp4":
+    if video_parts[-1] == target_format:
         return video
-    output_file = video_parts[0] + ".mp4"
+    output_file = video_parts[0] + f".{target_format}"
     stream = ffmpeg.input(video)
-    stream = ffmpeg.output(stream, output_file, format='mp4', vcodec='copy', acodec='copy')
+    stream = ffmpeg.output(stream, output_file, format=target_format, vcodec='copy', acodec='copy')
     ffmpeg.run(stream)
     return output_file
 
@@ -101,7 +102,7 @@ def remux(video):
 def upload(remuxed_video):
     print(f"Uploading: {remuxed_video}")
     local_file = remuxed_video
-    remote_path = "onedrive:youtube_videos/"
+    remote_path = read_config("remote_path")
 
     with subprocess.Popen(["rclone", "sync", local_file, remote_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1, text=True) as process:
         if process.stdout:
@@ -120,6 +121,19 @@ def clean_up(clean_up_list):
     for file in clean_up_list:
         print(f"Deleting {file}")
         os.remove(file)
+
+
+def read_config(data):
+    with open('config.json') as config_file:
+        config = json.load(config_file)
+
+    remote_path = config['remote_path']
+    target_format = config['target_format']
+
+    if data == "remote_path":
+        return remote_path
+    else:
+        return target_format
 
 
 if __name__ == '__main__':
