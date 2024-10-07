@@ -15,12 +15,16 @@ is_processing = False
 def archive():
     try:
         url = request.args.get('url')
-        print(url)
+        print(f"Recieved URL: {url}")
+        print("Checking cache")
         if not check_cache(url):
             url_queue.append(url)
             update_cache(url)
             if not is_processing:
                 start_processing()
+        else:
+            print("Video already archived")
+
 
         return "OK", 200
     except:
@@ -95,6 +99,7 @@ def remux(video):
 
 
 def upload(remuxed_video):
+    print(f"Uploading: {remuxed_video}")
     local_file = remuxed_video
     remote_path = "onedrive:youtube_videos/"
 
