@@ -8,5 +8,8 @@
     "96": "icons/goose-96.png"
   },
   "permissions": ["tabs", "storage"],
-  "options_page": "options.html"
+  "options_page": "options.html",
+  "background": {
+    "scripts": ["auto-archiver.js"]
+  }
 }
